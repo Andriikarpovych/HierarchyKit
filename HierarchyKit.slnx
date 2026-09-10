@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Examples/">
+    <Project Path="examples/HierarchyKit.Examples/HierarchyKit.Examples.csproj" />
+  </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/HierarchyKit.Tests/HierarchyKit.Tests.csproj" />
   </Folder>

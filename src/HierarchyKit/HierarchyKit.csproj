@@ -4,6 +4,22 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>HierarchyKit</PackageId>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <Authors>HierarchyKit Contributors</Authors>
+    <Company>HierarchyKit Contributors</Company>
+    <Description>Build, traverse, validate, and mutate hierarchical data structures in .NET.</Description>
+    <PackageTags>hierarchy;tree;graph;traversal;dfs;bfs</PackageTags>
+    <RepositoryUrl>https://github.com/Andriikarpovych/HierarchyKit</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Andriikarpovych/HierarchyKit</PackageProjectUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>
