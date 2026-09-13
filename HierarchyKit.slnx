@@ -5,5 +5,10 @@
   <Folder Name="/Tests/">
     <Project Path="Tests/HierarchyKit.Tests/HierarchyKit.Tests.csproj" />
   </Folder>
+  <Folder Name="/Benchmarks/">
+    <Project Path="benchmarks/HierarchyKit.Benchmarks/HierarchyKit.Benchmarks.csproj" />
+  </Folder>
   <Project Path="src/HierarchyKit/HierarchyKit.csproj" />
 </Solution>
+
+

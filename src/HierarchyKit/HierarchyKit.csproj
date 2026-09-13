@@ -1,25 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>HierarchyKit</PackageId>
     <VersionPrefix>0.1.0</VersionPrefix>
-    <Authors>HierarchyKit Contributors</Authors>
-    <Company>HierarchyKit Contributors</Company>
+    <Authors>Andrii Karpovych</Authors>
+    <Company>Andrii Karpovych</Company>
+    <Copyright>Copyright © 2026 Andrii Karpovych</Copyright>
     <Description>Build, traverse, validate, and mutate hierarchical data structures in .NET.</Description>
-    <PackageTags>hierarchy;tree;graph;traversal;dfs;bfs</PackageTags>
+    <PackageTags>hierarchy;tree;forest;graph;in-memory;business-entities;traversal;dfs;bfs</PackageTags>
     <RepositoryUrl>https://github.com/Andriikarpovych/HierarchyKit</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/Andriikarpovych/HierarchyKit</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReleaseNotes>Initial MVP release of the in-memory hierarchy library for .NET business entities.</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
