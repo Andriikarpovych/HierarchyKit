@@ -3,3 +3,6 @@
 **/[Bb]in/
 **/[Oo]bj/
 artifacts/
+
+# Copilot instructions are repository-local and should not be committed.
+.github/copilot-instructions.md

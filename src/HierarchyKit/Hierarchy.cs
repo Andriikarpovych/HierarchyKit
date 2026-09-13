@@ -18,8 +18,6 @@ public sealed class Hierarchy<TKey, TNode>
 {
     private readonly Dictionary<TKey, TNode> _nodes;
 
-    private readonly List<TKey> _nodeOrder;
-
     private readonly IEqualityComparer<TKey> _keyComparer;
 
     private readonly IHierarchyRelations<TKey> _relations;
@@ -28,14 +26,11 @@ public sealed class Hierarchy<TKey, TNode>
     /// Initializes a new hierarchy.
     /// </summary>
     /// <param name="keyComparer">The comparer used to identify node keys.</param>
-    public Hierarchy(
-        IEqualityComparer<TKey>? keyComparer = null)
+    public Hierarchy(IEqualityComparer<TKey>? keyComparer = null)
     {
         _keyComparer = keyComparer ?? EqualityComparer<TKey>.Default;
 
         _nodes = new Dictionary<TKey, TNode>(_keyComparer);
-
-        _nodeOrder = new List<TKey>();
 
         _relations = new TreeRelations<TKey>(_keyComparer);
     }
@@ -96,8 +91,6 @@ public sealed class Hierarchy<TKey, TNode>
         {
             throw new DuplicateNodeException(node.Id);
         }
-
-        _nodeOrder.Add(node.Id);
     }
 
     /// <summary>
@@ -109,9 +102,7 @@ public sealed class Hierarchy<TKey, TNode>
     /// <exception cref="InvalidHierarchyOperationException"><paramref name="node"/> is its own parent.</exception>
     /// <exception cref="NodeNotFoundException">The parent does not exist.</exception>
     /// <exception cref="DuplicateNodeException">A node with the same identifier already exists.</exception>
-    public void Add(
-        TNode node,
-        TKey parentId)
+    public void Add(TNode node, TKey parentId)
     {
         ArgumentNullException.ThrowIfNull(node);
 
@@ -135,7 +126,6 @@ public sealed class Hierarchy<TKey, TNode>
         try
         {
             _relations.Add(parentId, node.Id);
-            _nodeOrder.Add(node.Id);
         }
         catch
         {
@@ -150,7 +140,7 @@ public sealed class Hierarchy<TKey, TNode>
     /// Enumerates the direct children of a node.
     /// </summary>
     /// <param name="nodeId">The parent node identifier.</param>
-    /// <returns>The direct child nodes, in insertion order. A leaf node produces an empty list.</returns>
+    /// <returns>Gets root nodes in node enumeration order.</returns>
     /// <exception cref="NodeNotFoundException">No node exists with <paramref name="nodeId"/>.</exception>
     public IReadOnlyList<TNode> GetChildren(TKey nodeId)
     {
@@ -163,14 +153,13 @@ public sealed class Hierarchy<TKey, TNode>
     }
 
     /// <summary>
-    /// Gets root nodes in the order they were added to the hierarchy.
+    /// Gets root nodes in node enumeration order.
     /// </summary>
     /// <returns>The nodes that have no parent.</returns>
     public IReadOnlyList<TNode> GetRoots()
     {
-        return _nodeOrder
-            .Where(nodeId => !_relations.HasParent(nodeId))
-            .Select(Get)
+        return _nodes.Values
+            .Where(node => !_relations.HasParent(node.Id))
             .ToArray();
     }
 
@@ -184,6 +173,26 @@ public sealed class Hierarchy<TKey, TNode>
     {
         _ = Get(nodeId);
         return _relations.HasParent(nodeId);
+    }
+
+    /// <summary>
+    /// Gets the parent of a node.
+    /// </summary>
+    /// <param name="nodeId">The node identifier.</param>
+    /// <returns>The parent node.</returns>
+    /// <exception cref="NodeNotFoundException">No node exists with <paramref name="nodeId"/>.</exception>
+    /// <exception cref="InvalidOperationException">The node is a root and has no parent.</exception>
+    public TNode GetParent(TKey nodeId)
+    {
+        _ = Get(nodeId);
+
+        if (!_relations.TryGetParent(nodeId, out var parentId))
+        {
+            throw new InvalidOperationException(
+                $"Node '{nodeId}' has no parent.");
+        }
+
+        return Get(parentId);
     }
 
     /// <summary>
@@ -214,9 +223,7 @@ public sealed class Hierarchy<TKey, TNode>
     /// <param name="newParentId">The identifier of the new parent.</param>
     /// <exception cref="NodeNotFoundException">The node or new parent does not exist.</exception>
     /// <exception cref="InvalidHierarchyOperationException">The operation would make a node its own ancestor.</exception>
-    public void Move(
-        TKey nodeId,
-        TKey newParentId)
+    public void Move(TKey nodeId, TKey newParentId)
     {
         // Validate that both the node and the new parent exist in the hierarchy
         if (!_nodes.ContainsKey(nodeId))
@@ -255,9 +262,7 @@ public sealed class Hierarchy<TKey, TNode>
     /// <param name="behavior">Determines whether descendants are promoted or removed with the node.</param>
     /// <exception cref="NodeNotFoundException">The node does not exist.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="behavior"/> is not a defined value.</exception>
-    public void Remove(
-        TKey nodeId,
-        RemoveBehavior behavior = RemoveBehavior.PromoteChildren)
+    public void Remove(TKey nodeId, RemoveBehavior behavior = RemoveBehavior.PromoteChildren)
     {
         if (!_nodes.ContainsKey(nodeId))
         {
@@ -315,7 +320,6 @@ public sealed class Hierarchy<TKey, TNode>
     {
         _relations.Clear();
         _nodes.Clear();
-        _nodeOrder.Clear();
     }
 
     /// <summary>
@@ -326,6 +330,19 @@ public sealed class Hierarchy<TKey, TNode>
     public IEnumerable<TNode> Descendants(TKey nodeId)
     {
         return Descendants(nodeId, new SearchOptions());
+    }
+
+    /// <summary>
+    /// Enumerates descendants of a node using depth-first traversal.
+    /// </summary>
+    /// <param name="node">The node from which to start.</param>
+    /// <returns>The descendants of <paramref name="node"/>.</returns>
+    /// <exception cref="NodeNotFoundException">The node does not exist in the hierarchy.</exception>
+    public IEnumerable<TNode> Descendants(TNode node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        return Descendants(node.Id);
     }
 
     /// <summary>
@@ -378,16 +395,12 @@ public sealed class Hierarchy<TKey, TNode>
 
         while (true)
         {
-            if (_keyComparer.Equals(
-                    currentId,
-                    nodeId))
+            if (_keyComparer.Equals(currentId, nodeId))
             {
                 return true;
             }
 
-            if (!_relations.TryGetParent(
-                    currentId,
-                    out var parentId))
+            if (!_relations.TryGetParent(currentId, out var parentId))
             {
                 return false;
             }
@@ -408,6 +421,7 @@ public sealed class Hierarchy<TKey, TNode>
             yield break;
         }
 
+        // Breadth-first traversal
         if (options.Traversal.Strategy == TraversalStrategy.BreadthFirst)
         {
             var queue = new Queue<(TKey Id, int Depth)>();
@@ -431,6 +445,7 @@ public sealed class Hierarchy<TKey, TNode>
             yield break;
         }
 
+        // Depth-first traversal by default
         var stack = new Stack<(TKey Id, int Depth)>();
 
         PushChildren(nodeId, 1, stack);
@@ -555,7 +570,6 @@ public sealed class Hierarchy<TKey, TNode>
         }
 
         _nodes.Remove(nodeId);
-        _nodeOrder.Remove(nodeId);
     }
 
     private void RemoveSubtree(TKey nodeId, bool hasParent, TKey parentId, IReadOnlyCollection<TKey> childIds)
@@ -580,7 +594,6 @@ public sealed class Hierarchy<TKey, TNode>
         foreach (var id in nodeIds)
         {
             _nodes.Remove(id);
-            _nodeOrder.Remove(id);
         }
     }
 

@@ -19,6 +19,36 @@ public sealed class TraversalTests
     }
 
     [Fact]
+    public void Descendants_ShouldAcceptStartingNode()
+    {
+        // Arrange
+        var hierarchy = CreateHierarchy(out var root, out var firstChild, out var secondChild, out var grandChild);
+
+        // Act
+        var result = hierarchy.Descendants(root).Select(node => node.Id);
+
+        // Assert
+        Assert.Equal(new[] { firstChild.Id, grandChild.Id, secondChild.Id }, result);
+    }
+
+    [Fact]
+    public void ForEach_ShouldExecuteActionForFilteredDescendants()
+    {
+        // Arrange
+        var hierarchy = CreateHierarchy(out var root, out var firstChild, out var secondChild, out var grandChild);
+        var visited = new List<Guid>();
+
+        // Act
+        hierarchy.Descendants(root)
+            .Where(node => node.Id != secondChild.Id)
+            .ForEach(node => visited.Add(node.Id));
+
+        // Assert
+        Assert.Equal(new[] { firstChild.Id, grandChild.Id }, visited);
+    }
+
+
+    [Fact]
     public void Descendants_ShouldUseBreadthFirstTraversal_WhenRequested()
     {
         // Arrange

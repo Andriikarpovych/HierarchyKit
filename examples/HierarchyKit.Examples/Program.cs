@@ -4,14 +4,16 @@ using HierarchyKit.Operations;
 using HierarchyKit.Search;
 
 // A domain object needs only a stable identity. It does not store Parent or Children.
-var hierarchy = new Hierarchy<Guid, Department>();
+// Hierarchy is not thread-safe; synchronize shared instances in the consuming application.
+// Individual relationship mutations preserve relationship consistency or leave the indexes unchanged.
+var hierarchy = new Hierarchy<int, Department>();
 
-var company = new Department(Guid.NewGuid(), "Company");
-var engineering = new Department(Guid.NewGuid(), "Engineering");
-var operations = new Department(Guid.NewGuid(), "Operations");
-var platform = new Department(Guid.NewGuid(), "Platform");
-var qualityAssurance = new Department(Guid.NewGuid(), "Quality assurance");
-var support = new Department(Guid.NewGuid(), "Support");
+var company = new Department(10, "Company");
+var engineering = new Department(100, "Engineering");
+var operations = new Department(200, "Operations");
+var platform = new Department(110, "Platform");
+var qualityAssurance = new Department(120, "Quality assurance");
+var support = new Department(210, "Support");
 
 // Add a root, then use the parent's key when adding a child.
 hierarchy.Add(company);
@@ -70,8 +72,27 @@ PrintTree(hierarchy, "After replacing Platform");
 hierarchy.Clear();
 PrintTree(hierarchy, "After Clear");
 
+// Nodes can contain business behavior. LINQ can filter the traversal before executing a method on each node.
+var accountHierarchy = new Hierarchy<int, Account>();
+var account = new Account(1, 1_000m);
+var activeChildAccount = new Account(2, 250m);
+var inactiveChildAccount = new Account(3, 500m, isActive: false);
+
+accountHierarchy.Add(account);
+accountHierarchy.Add(activeChildAccount, account.Id);
+accountHierarchy.Add(inactiveChildAccount, account.Id);
+
+// Apply a maintenance fee to all active accounts in the hierarchy.
+accountHierarchy
+    .Descendants(account)
+    .Where(x => x.IsActive)
+    .ForEach(x => x.ApplyMaintenanceFee(10m));
+
+Console.WriteLine();
+Console.WriteLine($"Active accounts after closing descendants: {accountHierarchy.Descendants(account).Count(x => x.IsActive)}");
+
 static void PrintTree(
-    Hierarchy<Guid, Department> hierarchy,
+    Hierarchy<int, Department> hierarchy,
     string title)
 {
     Console.WriteLine();
@@ -84,7 +105,7 @@ static void PrintTree(
 }
 
 static void PrintBranch(
-    Hierarchy<Guid, Department> hierarchy,
+    Hierarchy<int, Department> hierarchy,
     Department node,
     int depth)
 {
@@ -102,4 +123,32 @@ static void PrintNames(IEnumerable<Department> nodes)
     Console.WriteLine();
 }
 
-public sealed record Department(Guid Id, string Name) : IHierarchyNode<Guid>;
+public sealed record Department(int Id, string Name) : IHierarchyNode<int>;
+
+public sealed class Account : IHierarchyNode<int>
+{
+    public Account(int id, decimal balance, bool isActive = true)
+    {
+        Id = id;
+        Balance = balance;
+        IsActive = isActive;
+    }
+
+    public int Id { get; }
+
+    public decimal Balance { get; private set; }
+
+    public bool IsActive { get; private set; }
+
+    public decimal ApplyMaintenanceFee(decimal amount)
+    {
+        Balance -= amount;
+        return Balance;
+    }
+
+    public void Close()
+    {
+        IsActive = false;
+        Balance = 0m;
+    }
+}

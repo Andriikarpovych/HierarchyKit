@@ -14,7 +14,7 @@ HierarchyKit is a .NET library for storing and operating on hierarchical data wi
 
 ## Requirements
 
-The current MVP targets .NET 10.
+The current MVP targets .NET 8 and .NET 10 (`net8.0;net10.0`).
 
 ## Quick start
 
@@ -113,10 +113,66 @@ hierarchy.Clear();
 - A node has at most one parent.
 - Moving a node cannot create a cycle.
 - Root nodes have no parent; a hierarchy may contain multiple roots.
+- Every parent-child relation is represented consistently in both directions: a child listed under a parent has that parent, and every parent entry has the child in the corresponding child collection.
+- A child cannot appear more than once in a parent's child collection.
+- All relation lookups and mutations use the configured `IEqualityComparer<TKey>`.
+- Sibling insertion order is preserved by relation mutations and queries.
+
+## Mutation guarantees
+
+Individual relationship mutations are designed to be failure-atomic: they either complete successfully or leave the relationship indexes unchanged. Relation state is prepared before it is committed, so an exception during a single `Add`, `Remove`, `Move`, or `Clear` relation mutation does not leave the parent and child indexes partially updated.
+
+This is an exception-safety guarantee for a single relationship mutation, not a concurrency guarantee. It does not make the hierarchy thread-safe and does not provide a snapshot while another operation is running.
+
+Composite operations such as `Remove` with `PromoteChildren` or `Cascade` perform multiple relationship mutations and are not a transaction covering the complete public operation. If a later step fails, earlier steps are not automatically rolled back.
+
+## Thread safety
+
+`Hierarchy` is not thread-safe.
+
+Concurrent access and synchronization are the responsibility of the consumer. Callers must synchronize concurrent reads and mutations when a hierarchy instance is shared between threads.
+
+Individual relationship mutations are designed to preserve internal relationship consistency and should either complete successfully or leave the relationship indexes unchanged. This guarantee applies to the relationship indexes for the individual mutation; it does not provide synchronization between concurrent operations or transactional rollback for composite hierarchy operations.
+
+HierarchyKit does not synchronize mutations of the state of user-defined node objects. If node instances contain mutable business state, that state must be synchronized by the consumer independently of the hierarchy.
+
+## Benchmarks
+
+The repository contains a separate BenchmarkDotNet project for measuring the in-memory implementation:
+
+```bash
+dotnet run --project benchmarks/HierarchyKit.Benchmarks/HierarchyKit.Benchmarks.csproj -c Release -- --job short
+```
+
+The benchmark matrix covers hierarchies with 100, 1,000, and 5,000 nodes and measures `Add`, `Move`, `Remove`, `GetChildren`, and materialized `Descendants`. `MemoryDiagnoser` reports allocations in addition to elapsed time.
+
+The mutation benchmarks are particularly useful for tracking the cost of the current failure-atomic copy-on-write implementation. Each mutation prepares copies of the relation indexes before commit, so its allocation and latency can grow with hierarchy size. Benchmark results are environment-dependent and should be compared on the same hardware and runtime configuration.
+
+The benchmark fixture is intentionally simple: most nodes are siblings under one source parent, `Move` moves a leaf between two parents, and `Remove` removes a leaf with `Cascade`. These results describe that workload; deep trees, high branching factors, and subtree removal should be benchmarked separately before making capacity decisions.
+
+Persistence and database access are outside the scope of these benchmarks and are not part of the current MVP.
+
+## Publishing
+
+The repository contains a GitHub Actions workflow for publishing to NuGet.org. To publish a
+release:
+
+1. Create a NuGet.org API key with push permission for the `HierarchyKit` package.
+2. Add it to the GitHub repository as an Actions secret named `NUGET_API_KEY`.
+3. Create and push a SemVer tag, for example `v0.1.0`:
+
+   ```bash
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+
+The workflow restores, tests both target frameworks, creates the package with the version from
+the tag, and publishes the `.nupkg` and `.snupkg` files. NuGet package versions are immutable,
+so each release must use a new version.
 
 ## Status
 
-The project is currently an MVP. NuGet publishing and CI will be added before the 1.0.0 release.
+The project is currently an MVP.
 
 ## Runnable example
 
