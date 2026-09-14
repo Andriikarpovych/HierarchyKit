@@ -35,7 +35,7 @@ hierarchy.Add(engineering, company.Id);
 hierarchy.Add(platform, engineering.Id);
 ```
 
-The domain model contains only its identity. `Hierarchy` owns all parent-child relationships.
+The domain model only needs to expose its identity through `IHierarchyNode<TKey>` to participate in the hierarchy. `Hierarchy` owns all parent-child relationships.
 
 ## Querying the structure
 
