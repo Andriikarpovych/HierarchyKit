@@ -3,7 +3,7 @@
     <Project Path="examples/HierarchyKit.Examples/HierarchyKit.Examples.csproj" />
   </Folder>
   <Folder Name="/Tests/">
-    <Project Path="Tests/HierarchyKit.Tests/HierarchyKit.Tests.csproj" />
+    <Project Path="tests/HierarchyKit.Tests/HierarchyKit.Tests.csproj" />
   </Folder>
   <Folder Name="/Benchmarks/">
     <Project Path="benchmarks/HierarchyKit.Benchmarks/HierarchyKit.Benchmarks.csproj" />
