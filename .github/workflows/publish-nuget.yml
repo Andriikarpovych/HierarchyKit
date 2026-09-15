@@ -44,7 +44,7 @@ jobs:
         run: dotnet restore HierarchyKit.slnx
 
       - name: Build and test
-        run: dotnet test Tests/HierarchyKit.Tests/HierarchyKit.Tests.csproj --configuration Release --no-restore
+        run: dotnet test tests/HierarchyKit.Tests/HierarchyKit.Tests.csproj --configuration Release --no-restore
 
       - name: Pack
         run: dotnet pack src/HierarchyKit/HierarchyKit.csproj --configuration Release --no-restore --output ./artifacts/packages -p:PackageVersion=${{ steps.version.outputs.value }}
