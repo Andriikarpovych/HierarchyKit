@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>HierarchyKit</PackageId>
-    <VersionPrefix>0.1.2</VersionPrefix>
+    <VersionPrefix>0.1.0</VersionPrefix>
     <Authors>Andrii Karpovych</Authors>
     <Company>Andrii Karpovych</Company>
     <Copyright>Copyright © 2026 Andrii Karpovych</Copyright>
