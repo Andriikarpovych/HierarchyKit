@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 env:
   DOTNET_NOLOGO: true
@@ -47,12 +48,12 @@ jobs:
       - name: Pack
         run: dotnet pack src/HierarchyKit/HierarchyKit.csproj --configuration Release --no-restore --output ./artifacts/packages -p:PackageVersion=${{ steps.version.outputs.value }}
 
+      - name: Log in to NuGet.org
+        id: nuget-login
+        uses: NuGet/login@v1
+
       - name: Publish package
-        run: dotnet nuget push "./artifacts/packages/*.nupkg" --api-key "$NUGET_API_KEY" --source "$NUGET_SOURCE" --skip-duplicate
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push "./artifacts/packages/*.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source "$NUGET_SOURCE" --skip-duplicate
 
       - name: Publish symbols package
-        run: dotnet nuget push "./artifacts/packages/*.snupkg" --api-key "$NUGET_API_KEY" --source "$NUGET_SOURCE" --skip-duplicate
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push "./artifacts/packages/*.snupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source "$NUGET_SOURCE" --skip-duplicate
