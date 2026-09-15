@@ -53,7 +53,7 @@ jobs:
         uses: NuGet/login@v1
 
       - name: Publish package
-        run: dotnet nuget push "./artifacts/packages/*.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_AUTH_TOKEN }}" --source "$NUGET_SOURCE" --skip-duplicate
+        run: dotnet nuget push "./artifacts/packages/*.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source "$NUGET_SOURCE" --skip-duplicate
 
       - name: Publish symbols package
-        run: dotnet nuget push "./artifacts/packages/*.snupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_AUTH_TOKEN }}" --source "$NUGET_SOURCE" --skip-duplicate
+        run: dotnet nuget push "./artifacts/packages/*.snupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source "$NUGET_SOURCE" --skip-duplicate
