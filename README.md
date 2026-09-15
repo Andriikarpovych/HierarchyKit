@@ -157,8 +157,9 @@ Persistence and database access are outside the scope of these benchmarks and ar
 The repository contains a GitHub Actions workflow for publishing to NuGet.org. To publish a
 release:
 
-1. Create a NuGet.org API key with push permission for the `HierarchyKit` package.
-2. Add it to the GitHub repository as an Actions secret named `NUGET_API_KEY`.
+1. Configure NuGet.org Trusted Publishing for this GitHub repository and workflow.
+2. Add your NuGet.org username to the GitHub repository as an Actions secret named
+   `NUGET_USER`.
 3. Create and push a SemVer tag, for example `v0.1.0`:
 
    ```bash
