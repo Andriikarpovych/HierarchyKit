@@ -8,14 +8,13 @@ namespace HierarchyKit.Hierarchy;
 internal sealed class TreeRelations<TKey> : IHierarchyRelations<TKey>
     where TKey : notnull
 {
-    private readonly Dictionary<TKey, TKey> _parents;
+    private Dictionary<TKey, TKey> _parents;
 
-    private readonly Dictionary<TKey, List<TKey>> _children;
+    private Dictionary<TKey, List<TKey>> _children;
 
     private readonly IEqualityComparer<TKey> _keyComparer;
 
-    public TreeRelations(
-        IEqualityComparer<TKey>? keyComparer = null)
+    public TreeRelations(IEqualityComparer<TKey>? keyComparer = null)
     {
         _keyComparer = keyComparer ?? EqualityComparer<TKey>.Default;
 
@@ -29,21 +28,14 @@ internal sealed class TreeRelations<TKey> : IHierarchyRelations<TKey>
         return _parents.ContainsKey(nodeId);
     }
 
-    public bool TryGetParent(
-        TKey nodeId,
-        out TKey parentId)
+    public bool TryGetParent(TKey nodeId, out TKey parentId)
     {
-        return _parents.TryGetValue(
-            nodeId,
-            out parentId!);
+        return _parents.TryGetValue(nodeId, out parentId!);
     }
 
-    public IReadOnlyCollection<TKey> GetChildren(
-        TKey nodeId)
+    public IReadOnlyCollection<TKey> GetChildren(TKey nodeId)
     {
-        if (_children.TryGetValue(
-                nodeId,
-                out var children))
+        if (_children.TryGetValue(nodeId, out var children))
         {
             return children.ToArray();
         }
@@ -53,42 +45,67 @@ internal sealed class TreeRelations<TKey> : IHierarchyRelations<TKey>
 
     public void Add(TKey parentId, TKey childId)
     {
-        _parents.Add(childId, parentId);
+        var parents = new Dictionary<TKey, TKey>(_parents, _keyComparer);
+        var childrenByParent = CloneChildren();
 
-        if (!_children.TryGetValue(parentId, out var children))
+        parents.Add(childId, parentId);
+
+        if (!childrenByParent.TryGetValue(parentId, out var children))
         {
             children = new List<TKey>();
 
-            _children.Add(parentId, children);
+            childrenByParent.Add(parentId, children);
         }
 
         children.Add(childId);
+
+        Commit(parents, childrenByParent);
     }
 
     public void Remove(TKey parentId, TKey childId)
     {
-        _parents.Remove(childId);
-
-        if (_children.TryGetValue(parentId, out var children))
+        if (!_parents.TryGetValue(childId, out var actualParentId) ||
+            !_keyComparer.Equals(actualParentId, parentId))
         {
-            children.Remove(childId);
-
-            if (children.Count == 0)
-            {
-                _children.Remove(parentId);
-            }
+            return;
         }
+
+        if (!_children.TryGetValue(actualParentId, out var currentChildren))
+        {
+            throw new InvalidOperationException(
+                "The relation indexes are inconsistent: the parent does not contain the child list.");
+        }
+
+        var childIndex = FindChildIndex(currentChildren, childId);
+
+        if (childIndex < 0)
+        {
+            throw new InvalidOperationException(
+                "The relation indexes are inconsistent: the parent does not contain the child.");
+        }
+
+        var parents = new Dictionary<TKey, TKey>(_parents, _keyComparer);
+        var childrenByParent = CloneChildren();
+
+        parents.Remove(childId);
+
+        var children = childrenByParent[actualParentId];
+        children.RemoveAt(childIndex);
+
+        if (children.Count == 0)
+        {
+            childrenByParent.Remove(actualParentId);
+        }
+
+        Commit(parents, childrenByParent);
     }
 
+    // Moves a node to a new parent in the hierarchy.
     public void Move(TKey nodeId, TKey newParentId)
     {
-        if (!_parents.TryGetValue(
-                nodeId,
-                out var currentParentId))
+        if (!_parents.TryGetValue(nodeId, out var currentParentId))
         {
-            // Root node.
             Add(newParentId, nodeId);
-
             return;
         }
 
@@ -97,38 +114,83 @@ internal sealed class TreeRelations<TKey> : IHierarchyRelations<TKey>
             return;
         }
 
-        if (!_children.TryGetValue(newParentId, out var newParentChildren))
+        if (!_children.TryGetValue(currentParentId, out var currentChildren))
         {
-            newParentChildren = new List<TKey>();
+            throw new InvalidOperationException(
+                "The relation indexes are inconsistent: the parent does not contain the child list.");
         }
 
-        // Prepare all required structures
-        // BEFORE changing existing state.
+        var childIndex = FindChildIndex(currentChildren, nodeId);
 
-        newParentChildren.Add(nodeId);
+        if (childIndex < 0)
+        {
+            throw new InvalidOperationException(
+                "The relation indexes are inconsistent: the parent does not contain the child.");
+        }
 
-        // Now mutation starts.
+        var parents = new Dictionary<TKey, TKey>(_parents, _keyComparer);
+        var childrenByParent = CloneChildren();
+        var oldParentChildren = childrenByParent[currentParentId];
+        var storedNodeId = oldParentChildren[childIndex];
 
-        var oldParentChildren = _children[currentParentId];
-
-        oldParentChildren.Remove(nodeId);
+        oldParentChildren.RemoveAt(childIndex);
 
         if (oldParentChildren.Count == 0)
         {
-            _children.Remove(currentParentId);
+            childrenByParent.Remove(currentParentId);
         }
 
-        _parents[nodeId] = newParentId;
-
-        if (!_children.ContainsKey(newParentId))
+        if (!childrenByParent.TryGetValue(newParentId, out var newParentChildren))
         {
-            _children.Add(newParentId, newParentChildren);
+            newParentChildren = new List<TKey>();
+            childrenByParent.Add(newParentId, newParentChildren);
         }
+
+        newParentChildren.Add(storedNodeId);
+        parents[nodeId] = newParentId;
+
+        Commit(parents, childrenByParent);
     }
 
     public void Clear()
     {
-        _parents.Clear();
-        _children.Clear();
+        var parents = new Dictionary<TKey, TKey>(_keyComparer);
+        var childrenByParent = new Dictionary<TKey, List<TKey>>(_keyComparer);
+
+        Commit(parents, childrenByParent);
+    }
+
+    private Dictionary<TKey, List<TKey>> CloneChildren()
+    {
+        var childrenByParent = new Dictionary<TKey, List<TKey>>(
+            _children.Count,
+            _keyComparer);
+
+        foreach (var pair in _children)
+        {
+            childrenByParent.Add(pair.Key, new List<TKey>(pair.Value));
+        }
+
+        return childrenByParent;
+    }
+
+    private int FindChildIndex(List<TKey> children, TKey childId)
+    {
+        for (var index = 0; index < children.Count; index++)
+        {
+            if (_keyComparer.Equals(children[index], childId))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private void Commit(Dictionary<TKey, TKey> parents, Dictionary<TKey, List<TKey>> childrenByParent)
+    {
+        _parents = parents;
+
+        _children = childrenByParent;
     }
 }

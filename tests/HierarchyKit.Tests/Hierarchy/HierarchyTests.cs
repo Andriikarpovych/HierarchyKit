@@ -129,6 +129,49 @@ public class HierarchyTests
     }
 
     [Fact]
+    public void GetParent_ShouldReturnParentForChild()
+    {
+        // Arrange
+        var hierarchy = new Hierarchy<Guid, TestNode>();
+        var parent = new TestNode(Guid.NewGuid());
+        var child = new TestNode(Guid.NewGuid());
+
+        hierarchy.Add(parent);
+        hierarchy.Add(child, parent.Id);
+
+        // Act
+        var result = hierarchy.GetParent(child.Id);
+
+        // Assert
+        Assert.Same(parent, result);
+    }
+
+    [Fact]
+    public void GetParent_ShouldThrow_WhenNodeIsRoot()
+    {
+        // Arrange
+        var hierarchy = new Hierarchy<Guid, TestNode>();
+        var root = new TestNode(Guid.NewGuid());
+
+        hierarchy.Add(root);
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(
+            () => hierarchy.GetParent(root.Id));
+    }
+
+    [Fact]
+    public void GetParent_ShouldThrow_WhenNodeDoesNotExist()
+    {
+        // Arrange
+        var hierarchy = new Hierarchy<Guid, TestNode>();
+
+        // Act & Assert
+        Assert.Throws<NodeNotFoundException>(
+            () => hierarchy.GetParent(Guid.NewGuid()));
+    }
+
+    [Fact]
     public void TryGetParent_ShouldReturnParentForChild_AndFalseForRoot()
     {
         // Arrange
